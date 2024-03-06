@@ -14,12 +14,12 @@ func GetJWTKey() {
 	JwtKey = os.Getenv("JWTKEY")
 }
 
-func CreateToken(username string, id string) (string, error) {
+func CreateToken(email string, id string) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256,
 		jwt.MapClaims{
-			"username": username,
-			"id":       id,
-			"exp":      time.Now().Add(time.Hour * 24).Unix(),
+			"email": email,
+			"id":    id,
+			"exp":   time.Now().Add(time.Hour * 24).Unix(),
 		})
 
 	tokenString, err := token.SignedString([]byte(JwtKey))
@@ -30,15 +30,16 @@ func CreateToken(username string, id string) (string, error) {
 	return tokenString, nil
 }
 
-func VerifyToken(tokenString string) error {
+func VerifyToken(tokenString string) (jwt.MapClaims, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		return []byte(JwtKey), nil
 	})
+	payload := token.Claims.(jwt.MapClaims)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if !token.Valid {
-		return fmt.Errorf("token is not valid")
+		return nil, fmt.Errorf("token is not valid")
 	}
-	return nil
+	return payload, nil
 }

@@ -17,7 +17,7 @@ func UserCreation(ctx *gin.Context) {
 		Name     string
 		Bio      string
 		Email    string
-		DoB      string
+		DoB      time.Time
 		Password string
 	}
 	if err := ctx.BindJSON(&Body); err != nil {
@@ -26,14 +26,7 @@ func UserCreation(ctx *gin.Context) {
 		})
 		return
 	}
-	// utcTime, err := time.Parse(time.RFC1123, Body.DoB)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// 	ctx.JSON(http.StatusBadRequest, gin.H{
-	// 		"message": "can't convert the time string",
-	// 	})
-	// 	return
-	// }
+
 	alreadyData := models.User{}
 	initializers.Db.Where("email = ?", Body.Email).First(&alreadyData)
 	if alreadyData.ID != "" {
@@ -50,7 +43,7 @@ func UserCreation(ctx *gin.Context) {
 		})
 		return
 	}
-	user := models.User{Name: Body.Name, Bio: Body.Bio, Email: Body.Email, DoB: time.Now(), Password: string(hashedPassword)}
+	user := models.User{Name: Body.Name, Bio: Body.Bio, Email: Body.Email, DoB: Body.DoB, Password: string(hashedPassword)}
 	initializers.Db.Create(&user)
 	ctx.JSON(http.StatusAccepted, gin.H{
 		"message": fmt.Sprintf("User is created with id:%v, name:%v, email:%v", user.ID, user.Name, user.Email),
@@ -106,7 +99,7 @@ func UserGet(ctx *gin.Context) {
 		return
 	}
 	tokenString := token[len("Bearer "):]
-	err := initializers.VerifyToken(tokenString)
+	payload, err := initializers.VerifyToken(tokenString)
 	if err != nil {
 		fmt.Println(err)
 		ctx.JSON(http.StatusUnauthorized, gin.H{
@@ -115,7 +108,8 @@ func UserGet(ctx *gin.Context) {
 		return
 	}
 	user := models.User{}
-	initializers.Db.Where("email = ?", ctx.Query("email")).First(&user)
+	email := payload["email"].(string)
+	initializers.Db.Where("email = ?", email).First(&user)
 	if user.ID == "" {
 		ctx.JSON(http.StatusNotFound, gin.H{
 			"message": "User not found",

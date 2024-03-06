@@ -10,5 +10,5 @@ func init() {
 	initializers.Connect()
 }
 func main() {
-	initializers.Db.AutoMigrate(&models.User{})
+	initializers.Db.AutoMigrate(&models.User{}, &models.Tweet{})
 }

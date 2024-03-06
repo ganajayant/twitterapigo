@@ -14,8 +14,18 @@ func init() {
 
 func main() {
 	r := gin.Default()
-	r.POST("/user", controllers.UserCreation)
-	r.GET("/user", controllers.UserLogin)
-	r.PUT("/user", controllers.UserGet)
+	userRoutes := r.Group("/user")
+	{
+		userRoutes.POST("/create", controllers.UserCreation)
+		userRoutes.GET("/login", controllers.UserLogin)
+		userRoutes.GET("/info", controllers.UserGet)
+	}
+
+	tweetRoutes := r.Group("/tweet")
+	{
+		tweetRoutes.POST("/create", controllers.TweetCreation)
+		tweetRoutes.PUT("/edit", controllers.TweetEdit)
+	}
+
 	r.Run()
 }
