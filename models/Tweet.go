@@ -10,6 +10,7 @@ import (
 type Tweet struct {
 	ID        string `gorm:"primaryKey"`
 	Text      string
+	ImageUrl  string
 	UserID    string
 	CreatedAt time.Time
 	UpdatedAt time.Time

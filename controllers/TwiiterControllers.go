@@ -2,7 +2,9 @@ package controllers
 
 import (
 	"fmt"
+	"io"
 	"net/http"
+	"os"
 
 	"github.com/ganajayant/twitterapigo/initializers"
 	"github.com/ganajayant/twitterapigo/models"
@@ -35,19 +37,50 @@ func TweetCreation(ctx *gin.Context) {
 		})
 		return
 	}
-	var Body struct {
-		Text string
-	}
-	err1 := ctx.BindJSON(&Body)
-	if err1 != nil {
+	file, err := ctx.FormFile("tweetimage")
+	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
-			"message": "can't bind the body",
+			"message": "can't get the file",
 		})
 		return
 	}
+	text := ctx.Request.FormValue("text")
+	if text == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"message": "text is not provided",
+		})
+		return
+	}
+	imagepath := file.Filename
+	Bucket := initializers.Bucket
+	wc := Bucket.Object(imagepath).NewWriter(ctx)
+	f, err := file.Open()
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"message": "can't open the file",
+		})
+		return
+	}
+	_, err = io.Copy(wc, f)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"message": "can't copy the file",
+		})
+		return
+	}
+	if err := wc.Close(); err != nil {
+		fmt.Println(err)
+		ctx.JSON(http.StatusBadRequest, gin.H{
+			"message": "can't close the file",
+		})
+		return
+	}
+	imageurl := "https://storage.cloud.google.com/" + os.Getenv("Bucket") + "/" + imagepath
+
 	tweet := models.Tweet{
-		Text:   Body.Text,
-		UserID: user.ID,
+		Text:     text,
+		UserID:   user.ID,
+		ImageUrl: imageurl,
 	}
 	initializers.Db.Create(&tweet)
 	ctx.JSON(http.StatusOK, gin.H{

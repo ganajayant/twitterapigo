@@ -10,10 +10,12 @@ func init() {
 	initializers.LoadENV()
 	initializers.Connect()
 	initializers.GetJWTKey()
+	initializers.ConnectFireBase()
 }
 
 func main() {
 	r := gin.Default()
+	r.MaxMultipartMemory = 8 << 20
 	userRoutes := r.Group("/user")
 	{
 		userRoutes.POST("/create", controllers.UserCreation)
