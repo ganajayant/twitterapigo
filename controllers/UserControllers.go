@@ -2,7 +2,7 @@ package controllers
 
 import (
 	"fmt"
-	"log"
+	"mime/multipart"
 	"net/http"
 	"time"
 
@@ -19,14 +19,15 @@ func UserCreation(ctx *gin.Context) {
 		Email    string
 		DoB      time.Time
 		Password string
+		Profile  *multipart.FileHeader
 	}
-	if err := ctx.BindJSON(&Body); err != nil {
+	err := ctx.Bind(&Body)
+	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{
 			"message": "can't bind the body",
 		})
 		return
 	}
-
 	alreadyData := models.User{}
 	initializers.Db.Where("email = ?", Body.Email).First(&alreadyData)
 	if alreadyData.ID != "" {
@@ -37,13 +38,19 @@ func UserCreation(ctx *gin.Context) {
 	}
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(Body.Password), bcrypt.DefaultCost)
 	if err != nil {
-		log.Fatal(err)
 		ctx.JSON(http.StatusBadRequest, gin.H{
 			"message": "can't hash the password",
 		})
 		return
 	}
-	user := models.User{Name: Body.Name, Bio: Body.Bio, Email: Body.Email, DoB: Body.DoB, Password: string(hashedPassword)}
+	imageurl, err := initializers.UploadFile(Body.Profile)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{
+			"message": "can't upload the file",
+		})
+		return
+	}
+	user := models.User{Name: Body.Name, Bio: Body.Bio, Email: Body.Email, DoB: Body.DoB, Password: string(hashedPassword), ProfilePicUrl: imageurl}
 	initializers.Db.Create(&user)
 	ctx.JSON(http.StatusAccepted, gin.H{
 		"message": fmt.Sprintf("User is created with id:%v, name:%v, email:%v", user.ID, user.Name, user.Email),
